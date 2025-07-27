@@ -1,14 +1,212 @@
-body {background-color: #282f34; color: #aeb9a6; font-family:monospace; font-size:10.5pt;}
-a { color: #adad9d; }
-footer a {color: darkgray; text-decoration:none; font-size:smaller}
-h1 {margin-bottom: 0}
-table td:nth-child(2) {text-align:right}
+/* Base styles */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  max-width: 960px;
+  margin: auto;
+  padding: 1rem;
+  background: #f9f9f9;
+  color: #222;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  touch-action: manipulation;
+  /* improves touch responsiveness */
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #121212;
+    color: #ddd;
+  }
+
+  a {
+    color: #90caf9;
+  }
+
+  table {
+    border-color: #333;
+  }
+
+  td {
+    border-color: #444;
+  }
+}
+
+a {
+  color: #0066cc;
+  text-decoration: none;
+}
+
+a:hover,
+a:focus {
+  text-decoration: underline;
+  outline-offset: 2px;
+}
+
+/* Table styles */
 table {
-  width:100%;
-  margin: 1em auto;
-  padding: 0.5em 0;
-  border-top: 1px;
-  border-bottom: 1px;
-  border-color: #444;
-  border-style: solid none;
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  user-select: none;
+  /* prevent accidental text selection on touch */
+}
+
+thead {
+  font-weight: bold;
+  border-bottom: 2px solid #666;
+}
+
+td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #ddd;
+  word-break: break-word;
+  font-size: 1rem;
+}
+
+/* Dark mode table borders */
+@media (prefers-color-scheme: dark) {
+  thead {
+    border-bottom-color: #555;
+  }
+
+  td {
+    border-bottom-color: #444;
+  }
+}
+
+/* Mobile / small screen */
+@media (max-width: 600px) {
+
+  table,
+  thead,
+  tbody,
+  tr,
+  td {
+    display: block;
+    width: 100%;
+  }
+
+  thead tr {
+    display: none;
+    /* hide header row on mobile */
+  }
+
+  tr {
+    margin-bottom: 1.25rem;
+    background: transparent;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    box-sizing: border-box;
+  }
+
+  td {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border: none;
+    font-size: 1.1rem;
+  }
+
+  td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #555;
+    flex-basis: 40%;
+    flex-shrink: 0;
+  }
+
+  /* Dark mode mobile cards */
+  @media (prefers-color-scheme: dark) {
+    tr {
+      border-color: #444;
+      background: #222;
+    }
+
+    td::before {
+      color: #aaa;
+    }
+  }
+}
+
+/* Make links easier to tap */
+a {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a:hover,
+a:focus {
+  background-color: #e0f0ff;
+}
+
+@media (prefers-color-scheme: dark) {
+
+  a:hover,
+  a:focus {
+    background-color: #264d73;
+  }
+}
+
+/* Increase input button size for touch */
+input[type="submit"] {
+  font-size: 1.1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+input[type="submit"]:hover,
+input[type="submit"]:focus {
+  background-color: #0056b3;
+}
+
+@media (prefers-color-scheme: dark) {
+  input[type="submit"] {
+    background-color: #3399ff;
+    color: #222;
+  }
+
+  input[type="submit"]:hover,
+  input[type="submit"]:focus {
+    background-color: #2673cc;
+  }
+}
+
+.dir-download {
+  margin-top: 1em;
+}
+
+.download-btn {
+  display: inline-block;
+  padding: 0.6em 1.2em;
+  background-color: #007aff;
+  color: white;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.download-btn:hover,
+.download-btn:focus {
+  background-color: #005fcc;
+}
+
+footer {
+  margin-top: 2rem;
+  padding: 1rem;
+  font-size: 0.9rem;
+  color: #666;
+  text-align: center;
 }

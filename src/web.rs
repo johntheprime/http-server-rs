@@ -1,10 +1,11 @@
 use actix_files::{Files, NamedFile};
+use actix_multipart::Multipart;
 use actix_web::{
-    get, middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
+    App, Error, HttpRequest, HttpResponse, HttpServer, Responder, get, middleware, post, web,
 };
 use futures::StreamExt;
 
-use std::path::PathBuf;
+use std::{io::Write, path::PathBuf};
 
 pub async fn run(bind_addr: &str, root: &PathBuf) -> std::io::Result<()> {
     let root_ = root.clone();
@@ -19,6 +20,7 @@ pub async fn run(bind_addr: &str, root: &PathBuf) -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .service(favicon_ico)
             .service(handle_tar)
+            .service(upload_handler)
             .service(static_files)
     })
     .bind(bind_addr)?
@@ -67,4 +69,40 @@ async fn favicon_ico() -> impl Responder {
         .content_type("image/png")
         .append_header(("Cache-Control", "only-if-cached, max-age=86400"))
         .body(FAVICON_ICO)
+}
+
+#[post("/upload")]
+async fn upload_handler(mut payload: Multipart, root: web::Data<PathBuf>) -> impl Responder {
+    while let Some(Ok(mut field)) = payload.next().await {
+        let content_disposition = field.content_disposition();
+        let filename = content_disposition.unwrap().get_filename().unwrap();
+
+        let filepath = root.join(&filename);
+        let mut file_buffer = web::BytesMut::new();
+
+        // Collect the uploaded file into memory
+        while let Some(chunk) = field.next().await {
+            match chunk {
+                Ok(bytes) => file_buffer.extend_from_slice(&bytes),
+                Err(_) => return HttpResponse::InternalServerError().body("Error reading upload"),
+            }
+        }
+
+        let result = web::block(move || -> std::io::Result<()> {
+            let mut f = std::fs::File::create(filepath)?;
+            f.write_all(&file_buffer)?;
+            Ok(())
+        })
+        .await;
+
+        if let Err(e) = result {
+            log::error!("File write failed: {}", e);
+            return HttpResponse::InternalServerError().body("Failed to write file");
+        }
+    }
+
+    // Redirect back to the listing after upload
+    HttpResponse::SeeOther()
+        .insert_header(("Location", "."))
+        .finish()
 }

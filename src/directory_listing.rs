@@ -1,7 +1,7 @@
 use actix_files::Directory;
 use actix_web::dev::ServiceResponse;
 use actix_web::{HttpRequest, HttpResponse};
-use percent_encoding::{utf8_percent_encode, CONTROLS}; // NON_ALPHANUMERIC
+use percent_encoding::{CONTROLS, percent_decode_str, utf8_percent_encode}; // NON_ALPHANUMERIC
 use std::fmt::Write;
 use std::path::Path;
 use v_htmlescape::escape as escape_html_entity;
@@ -19,11 +19,37 @@ macro_rules! encode_file_name {
     };
 }
 
+fn format_size(mut n: u64) -> String {
+    if n == 0 {
+        return "0".to_string();
+    }
+
+    let mut parts = Vec::new();
+    while n > 0 {
+        parts.push(format!("{:03}", n % 1000));
+        n /= 1000;
+    }
+
+    let mut result = parts.into_iter().rev().collect::<Vec<_>>();
+    // Remove leading zeros from first group
+    if let Some(first) = result.first_mut() {
+        *first = first.trim_start_matches('0').to_string();
+        if first.is_empty() {
+            *first = "0".to_string();
+        }
+    }
+    result.join(",")
+}
+
 pub fn directory_listing(
     dir: &Directory,
     req: &HttpRequest,
 ) -> Result<ServiceResponse, std::io::Error> {
-    let index_of = req.path().trim_end_matches('/');
+    let encoded_path = req.path().trim_end_matches('/');
+    let decoded_path = percent_decode_str(encoded_path)
+        .decode_utf8()
+        .unwrap_or_else(|_| encoded_path.into());
+    let index_of: &str = &decoded_path;
     let mut body = String::new();
     let base = Path::new(req.path());
 
@@ -49,10 +75,10 @@ pub fn directory_listing(
                 } else {
                     let _ = write!(
                         body,
-                        "<tr><td>🗎 <a href='{}'>{}</a></td> <td>{}</td></tr>",
+                        "<tr><td>🗎 <a href='{}'>{}</a></td> <td>{} Kb</td></tr>",
                         encode_file_url!(p),
                         encode_file_name!(entry),
-                        metadata.len(),
+                        format_size(metadata.len() / 1024),
                     );
                 }
             } else {
@@ -62,8 +88,14 @@ pub fn directory_listing(
     }
 
     let header = format!(
-        "<h1>Index of {}/</h1>\n\
-         <small>[<a href='{}.tar'>.tar</a> of whole directory]</small>",
+        r#"<h1>Current Dir {} </h1>
+         <div class="dir-download">
+            <a href="{}.tar" class="download-btn">⬇️ Download .tar</a>
+         </div>
+         <form method='POST' action='/upload' enctype='multipart/form-data' style='margin-top:1em;'>
+         <input type='file' name='file' multiple>
+         <input type='submit' value='Upload'>
+        </form>"#,
         index_of,
         if index_of.is_empty() { "_" } else { index_of }
     );
@@ -78,18 +110,22 @@ pub fn directory_listing(
     let style = include_str!("style.css");
 
     let html = format!(
-        "<!DOCTYPE html>\n\
-         <html>\n\
-         <head>\n\
-         <title>Index of {}</title>\n\
-         <style>\n{}</style></head>\n\
-         <body>\n{}\n\
-         <table>\n\
-         <tr><td>📁 <a href='../'>../</a></td><td>Size</td></tr>\n\
-         {}\
-         </table>\n\
-         {}\
-         </body>\n</html>",
+        r#"<!DOCTYPE html>
+         <html>
+         <head>
+         <meta charset="utf-8" />
+         <title>{}</title>
+         <style>{}</style></head>
+         <body>{}
+         <table>
+         <tr>
+         <td>📁 <a href='../'>../</a></td>
+         <td>Size</td>
+         </tr>
+         {}
+         </table>
+         {}
+         </body></html>"#,
         index_of, style, header, body, footer
     );
 
