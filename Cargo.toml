@@ -19,6 +19,8 @@ tar = "0.4.38"
 percent-encoding = "2.2"
 v_htmlescape = "0.15"
 actix-multipart = "0.7.2"
+zip = "4.3.0"
+walkdir = "2.5.0"
 
 [profile.release]
 opt-level = 'z'

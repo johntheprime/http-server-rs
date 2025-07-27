@@ -5,6 +5,10 @@ use actix_web::{
 };
 use futures::StreamExt;
 
+use std::{fs::File, io::Cursor};
+use walkdir::WalkDir;
+use zip::{CompressionMethod, ZipWriter, write::FileOptions};
+
 use std::{io::Write, path::PathBuf};
 
 pub async fn run(bind_addr: &str, root: &PathBuf) -> std::io::Result<()> {
@@ -20,6 +24,7 @@ pub async fn run(bind_addr: &str, root: &PathBuf) -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .service(favicon_ico)
             .service(handle_tar)
+            .service(zip_dir)
             .service(upload_handler)
             .service(static_files)
     })
@@ -105,4 +110,55 @@ async fn upload_handler(mut payload: Multipart, root: web::Data<PathBuf>) -> imp
     HttpResponse::SeeOther()
         .insert_header(("Location", "."))
         .finish()
+}
+
+#[get("/{tail:.*}.zip")]
+async fn zip_dir(
+    _req: HttpRequest,
+    root: web::Data<PathBuf>,
+    tail: web::Path<String>,
+) -> impl Responder {
+    let relpath = PathBuf::from(tail.trim_end_matches('/'));
+    let fullpath = root.join(&relpath).canonicalize().unwrap();
+
+    if !(fullpath.is_dir()) {
+        return HttpResponse::NotFound().body("Directory not found\n");
+    }
+
+    let mut buffer = Cursor::new(Vec::new());
+    let mut zip = ZipWriter::new(&mut buffer);
+    let options: FileOptions<'_, ()> = FileOptions::default()
+        .compression_method(CompressionMethod::Deflated)
+        .unix_permissions(0o755);
+
+    for entry in WalkDir::new(&fullpath).into_iter().filter_map(Result::ok) {
+        let entry_path = entry.path();
+        let relative_path = entry_path.strip_prefix(&fullpath).unwrap();
+
+        if entry_path.is_dir() {
+            zip.add_directory(relative_path.to_string_lossy(), options)
+                .unwrap();
+        } else if entry_path.is_file() {
+            zip.start_file(relative_path.to_string_lossy(), options)
+                .unwrap();
+            let mut f = File::open(entry_path).unwrap();
+            std::io::copy(&mut f, &mut zip).unwrap();
+        }
+    }
+
+    zip.finish().unwrap();
+    let zipped_data = buffer.into_inner();
+
+    let zip_filename = format!(
+        "{}.zip",
+        relpath.file_name().unwrap_or_default().to_string_lossy()
+    );
+
+    HttpResponse::Ok()
+        .insert_header(("Content-Type", "application/zip"))
+        .insert_header((
+            "Content-Disposition",
+            format!("attachment; filename=\"{}\"", zip_filename),
+        ))
+        .body(zipped_data)
 }

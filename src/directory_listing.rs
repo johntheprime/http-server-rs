@@ -67,15 +67,24 @@ pub fn directory_listing(
                 if metadata.is_dir() {
                     let _ = write!(
                         body,
-                        "<tr><td>📂 <a href='{}/'>{}/</a></td> <td><small>[<a href='{}.tar'>.tar</a>]</small></td></tr>",
+                        r#"
+                        <tr>
+                            <td class="folder-link">📂 <a href='{}/'>{}/</a></td> 
+                            <td><small>[<a href='{}.tar'>.tar</a>]</small></td>
+                            <td><small>[<a href='{}.zip'>.zip</a>]</small></td>
+                        </tr>"#,
                         encode_file_url!(p),
                         encode_file_name!(entry),
+                        encode_file_url!(p),
                         encode_file_url!(p),
                     );
                 } else {
                     let _ = write!(
                         body,
-                        "<tr><td>🗎 <a href='{}'>{}</a></td> <td>{} Kb</td></tr>",
+                        r#"<tr>
+                            <td class="folder-link">📄 <a href='{}'>{}</a></td> 
+                            <td>{} Kb</td>
+                        </tr>"#,
                         encode_file_url!(p),
                         encode_file_name!(entry),
                         format_size(metadata.len() / 1024),
@@ -88,9 +97,10 @@ pub fn directory_listing(
     }
 
     let header = format!(
-        r#"<h1>Current Dir {} </h1>
+        r#"<h1>Current Dir {0} </h1>
          <div class="dir-download">
-            <a href="{}.tar" class="download-btn">⬇️ Download .tar</a>
+            <a href="{1}.tar" class="download-btn">⬇️ Download .tar</a>
+            <a href="{1}.zip" class="download-btn">⬇️ Download .zip</a>
          </div>
          <form method='POST' action='/upload' enctype='multipart/form-data' style='margin-top:1em;'>
          <input type='file' name='file' multiple>
@@ -120,7 +130,8 @@ pub fn directory_listing(
          <table>
          <tr>
          <td>📁 <a href='../'>../</a></td>
-         <td>Size</td>
+         <td>Size/Tar</td>
+         <td>Zip</td>
          </tr>
          {}
          </table>

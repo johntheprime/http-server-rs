@@ -210,3 +210,20 @@ footer {
   color: #666;
   text-align: center;
 }
+
+.folder-link a {
+  display: inline-block;
+  max-width: 60ch;        /* approx 15 characters width */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  cursor: pointer;
+  transition: max-width 0.3s ease;
+}
+
+.folder-link.hover-expand a {
+  max-width: none;
+  white-space: normal;
+  overflow: visible;
+}
